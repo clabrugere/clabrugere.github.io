@@ -26,13 +26,9 @@ While not really formalized, we can apply a systematic process to minimize the c
 
 - Make sure the labels and inputs are aligned in the batch sampled from the data loader during the training process. To do so simply check that the tuples (input, label) on a small batch from the data loader are what you would expect. This mis-alignment can happen if you shuffle inputs and labels independently when building a batch for example.
 
-<center>
-
 |               Original dataset               |               Mis-aligned batches                |
 | :------------------------------------------: | :----------------------------------------------: |
 | (x0, y0)<br>(x1, y1)<br>(x2, y2)<br>(x3, y3) | { (x0, y1), (x1, y2) }<br>{ (x2, y0), (x3, y3) } |
-
-</center>
 
 - Make sure inputs are properly normalized: they should take values in $[0, 1]$, have zero mean and unit variance for continuous inputs to avoid saturating activation functions (leading to vanishing gradients). Features should have the same scale to avoid bias in the learning process: if feature 1 has an order of magnitude 1.0 but feature 2 has order of magnitude 1000.0, then gradient components corresponding to feature 2 will be much larger and hence the gradient descent will be biased towards one direction.
 
