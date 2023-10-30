@@ -101,7 +101,7 @@ loss = logits[0].sum()
 loss.backward()
 
 # they sould be zero for every index != 0 and not zero otherwise
-assert((x.grad[1:] == 0.0).all() and (x[0] != 0.0).any())
+assert((x.grad[1:] == 0.0).all() and (x.grad[0] != 0.0).any())
 ```
 
 For tensorflow:
