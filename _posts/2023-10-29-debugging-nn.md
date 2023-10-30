@@ -6,7 +6,7 @@ tags: [debugging]
 math: true
 ---
 
-This post compiles some tips to build strong baseline models and how to avoid bugs and propose methods to find them when designing a new machine learning system that uses a neural network. They are mostly taken from Karparthy's blog and some other sources or Stack-overflow posts.
+This post compiles some tips to build strong baseline models and how to avoid bugs and propose methods to find them when designing a new machine learning system that uses a neural network. They are mostly inspired by the gold mine that is Karparthy's blog, as well as some other sources or Stack-overflow posts.
 
 In the design process, we usually can expect to face more or less the same failure modes:
 
@@ -72,9 +72,17 @@ def set_seed(seed: int):
 
 - Avoid using methods that are not necessary for a basic training (for instance LR scheduling, quantization, data augmentations, etc…) in order to reduce the size of the search space of potential bugs.
 
-- Check that the initial loss makes sense: for instance if the cross-entropy loss is used, the initial loss should be close to $\log(\frac{1}{\text{num classes}})$ after the softmax/sigmoid if the last layer is initialized correctly.
+- Check that the initial loss makes sense: for instance if the cross-entropy loss is used, the initial loss should be close to $\log(\frac{1}{\text{num classes}})$ if the last layer is initialized correctly ( "default" values can be derived for other losses):
 
-- Include some prior knowledge in the initialization scheme: in a regression task, if you know the mean of the target is around some value x, you should initialize the bias of the last layer to x. If it is a classification task and you know you have a 100:1 class imbalance, set the bias of the logits such that the initial output probability is 0.1. It will help the training converge faster.
+$$
+\begin{split}
+\text{CE}(y, \hat{y}) & = - \sum_{c \in \mathcal{C}} y_c \log (\hat{y}_c) \\
+& = - \sum_{c \in \mathcal{C}} y_c \log (\frac{1}{\text{num classes}}) \\
+& = - \log(\frac{1}{\text{num classes}})
+\end{split}
+$$
+
+- Include some prior knowledge in the initialization scheme: in a regression task, if you know the mean of the target is around some value $\mu$, you should initialize the bias of the last layer to $\mu$. If it is a classification task and you know you have a 100:1 class imbalance, set the bias of the logits such that the initial output probability is 0.1. It will help the training converge faster.
 
 - Fit the model on a set of samples with constant values (such as tensors of zeros). This data-independent model should perform worse than the one fitted on the real data and if it does, it’ll indicate that the model is able to extract useful information for the learning task.
 
