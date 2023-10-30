@@ -136,9 +136,28 @@ assert(tf.reduce_all(grad[1:] == 0.0) & tf.reduce_any(grad[0] != 0.0))
 
 - Probing weight norms is also a good way to detect unstable training: a seemingly weight norm that keeps increasing can be an early sign of divergent training. Just like the point above, adding or increasing weight decay will probably help.
 
-- Logging intermediate values will help detect numerical instabilities. Those can happen when using functions that can easily under/overflow, such as log or exponential functions.
+```python
+# for pytorch
+# compute weights and their gradients norm during a forward-backward pass
+names, param_norms, grad_norms = [], [], []
+for name, param in in model.named_parameters():
+    if param.requires_grad and "bias" not in name:
+        names.append(name)
+        param_norms.append(param.detach().cpu().norm())
+        grad_norms.append(param.grad.detach().cpu().norm())
 
-- Similarly, logging intermediate values will help detect numerical instabilities. Those can happen when using functions that can easily under/overflow, such as log or exponential functions.
+# plot
+fig, axes = plt.subplots(nrows=2, sharex=True, figsize=(20, 20))
+axes[0].bar(x=names, height=param_norms)
+axes[0].set_ylabel("weight norm")
+
+axes[1].bar(x=names, height=grad_norms)
+axes[1].set_ylabel("gradient norm")
+axes[1].tick_params(axis="x", labelrotation=90)
+
+```
+
+- Logging intermediate values will help detect numerical instabilities. Those can happen when using functions that can easily under/overflow, such as log or exponential functions.
 
 - Plot loss curves as it allows to get a quick glance of the learning dynamics: does the model properly converge? Do you see large spikes? Are you overfitting at some point? Is the validation loss close to the training loss?
 
