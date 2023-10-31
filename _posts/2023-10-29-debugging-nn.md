@@ -42,11 +42,11 @@ While not really formalized, we can apply a systematic process to minimize the c
 
 - Don’t put regularization initially to make it easier to overfit on a small set of data points.
 
-- For deep networks or if you see vanishing gradients, you can add ‘skip-connections’ parallel to the main trainable block of layers, to build residual neural networks. It allows to flow gradients from the loss down to the input and addresses vanishing gradients.
+- For deep networks or if you see vanishing gradients, you can add ‘skip-connections’ parallel to the main trainable block of layers, to build residual neural networks. It allows gradients to flow from the loss down to the input and addresses vanishing gradients.
 
 ![skip connections](/assets/img/posts/debugging-nn/skip-connection.png)
 
-- Log every intermediate results shapes and invoke the forward pass on a small batch of random samples to make sure shapes are correct. Because of broadcasting rules, you can have silent failure modes when evaluating operations on tensors with the wrong shapes. Some causes of incorrect shapes can be: wrong dimension in reduce operations (sum, mean, …) or softmax, wrong dimensions in transpose/permute operations, forgot to unsqueeze/squeeze.
+- Log every intermediate results shapes and invoke the forward pass on a small batch of random samples to make sure shapes are correct. Because of broadcasting rules, you can have silent failure when evaluating operations on tensors with the wrong shapes. Some causes of incorrect shapes can be: wrong dimension in reduce operations (sum, mean, …) or softmax, wrong dimensions in transpose/permute operations, forgot to unsqueeze/squeeze.
 
 ### Training
 
@@ -85,6 +85,27 @@ $$
 & = - \log(\frac{1}{\text{num classes}})
 \end{split}
 $$
+
+- It is useful to have a fully flexible implementation of the model and the data loader such that you can easily change the number of hidden layers, their dimensions, the batch size, the learning rate, etc… In particular, implementing the model, data loader and training configurations as a Dataclass makes it easy to change the parameters in only one place.
+
+```python
+@dataclass
+class ModelConfig:
+    num_hidden: int
+    dim_hidden: int
+    dropout: float
+
+@dataclass
+class TrainingConfig:
+    batch_size: int
+    num_workers: int
+    learning_rate: float
+    weight_decay: float
+    max_epoch: int
+
+model_cfg = ModelConfig(4, 128, 0.2)
+train_cfg = TrainingConfig(1024, 8, 1e-3, 1e-6, 1000)
+```
 
 - Include some prior knowledge in the initialization scheme: in a regression task, if you know the mean of the target is around some value $\mu$, you should initialize the bias of the last layer to $\mu$. If it is a classification task and you know you have a 100:1 class imbalance, set the bias of the logits such that the initial output probability is 0.1. It will help the training converge faster.
 
