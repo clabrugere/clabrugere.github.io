@@ -72,7 +72,7 @@ def set_seed(seed: int):
 
 - Avoid using methods that are not necessary for a basic training (for instance LR scheduling, quantization, data augmentations, etc…) in order to reduce the size of the search space of potential bugs.
 
-- Check that the initial loss makes sense: for instance if the cross-entropy loss is used, the initial loss should be close to $\log(\frac{1}{\text{num classes}})$ if the last layer is initialized correctly ( "default" values can be derived for other losses):
+- Check that the initial loss makes sense: for instance if the cross-entropy loss is used, the initial loss should be close to $-\log(\frac{1}{\text{num classes}})$ if the last layer is initialized correctly ( "default" values can be derived for other losses):
 
 $$
 \begin{split}
