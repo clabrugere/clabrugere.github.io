@@ -44,6 +44,8 @@ While not really formalized, we can apply a systematic process to minimize the c
 
 - For deep networks or if you see vanishing gradients, you can add ‘skip-connections’ parallel to the main trainable block of layers, to build residual neural networks. It allows to flow gradients from the loss down to the input and addresses vanishing gradients.
 
+![skip connections](/assets/img/posts/debugging-nn/skip-connection.png)
+
 - Log every intermediate results shapes and invoke the forward pass on a small batch of random samples to make sure shapes are correct. Because of broadcasting rules, you can have silent failure modes when evaluating operations on tensors with the wrong shapes. Some causes of incorrect shapes can be: wrong dimension in reduce operations (sum, mean, …) or softmax, wrong dimensions in transpose/permute operations, forgot to unsqueeze/squeeze.
 
 ### Training
