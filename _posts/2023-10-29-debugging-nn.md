@@ -30,7 +30,9 @@ While not really formalized, we can apply a systematic process to minimize the c
 | :------------------------------------------: | :----------------------------------------------: |
 | (x0, y0)<br>(x1, y1)<br>(x2, y2)<br>(x3, y3) | { (x0, y1), (x1, y2) }<br>{ (x2, y0), (x3, y3) } |
 
-- Make sure inputs are properly normalized: they should take values in $[0, 1]$, have zero mean and unit variance for continuous inputs to avoid saturating activation functions (leading to vanishing gradients). Features should have the same scale to avoid bias in the learning process: if feature 1 has an order of magnitude 1.0 but feature 2 has order of magnitude 1000.0, then gradient components corresponding to feature 2 will be much larger and hence the gradient descent will be biased towards one direction.
+- Make sure continuous inputs are properly normalized: they should ideally take values in [0, 1] to avoid saturating activation functions (leading instabilities such as vanishing or exploding gradients). It is also a good practice to make the input have zero mean and unit variance.
+
+- Features should have the same scale to avoid bias in the learning process. If feature 1 has an order of magnitude 1 but feature 2 has order of magnitude 1000, then gradient components corresponding to feature 2 will be much larger and the descent of the gradient will be biased in one direction.
 
 - Explore and visualize the inputs you pass to the model to make sure they’re as expected: it will help to detect bugs on transforms and data augmentations.
 
