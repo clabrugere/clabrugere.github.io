@@ -46,9 +46,9 @@ While not really formalized, we can apply a systematic process to minimize the c
 
 ![skip connections](/assets/img/posts/debugging-nn/skip-connection.png)
 
-- Log every intermediate results shapes and invoke the forward pass on a small batch of random samples to make sure shapes are correct. Because of broadcasting rules, you can have silent failure when evaluating operations on tensors with the wrong shapes. Some causes of incorrect shapes can be: wrong dimension in reduce operations (sum, mean, …) or softmax, wrong dimensions in transpose/permute operations, forgot to unsqueeze/squeeze.
+- Log every intermediate results shapes and invoke the forward pass on a small batch of random samples to make sure shapes are correct. Because of broadcasting rules, you can have silent failure when evaluating operations on tensors with the wrong shapes. Some causes of incorrect shapes can be: wrong dimension in reduce operations (sum, mean, …) or softmax, wrong dimensions in transpose/permute operations, forgetting to unsqueeze/squeeze.
 
-### Training
+### Utility methods
 
 - Fix random seeds to make sure running the same code twice results in the same result, it makes debugging easier because it excludes some of the randomness from the picture.
 
@@ -72,20 +72,6 @@ def set_seed(seed: int):
     tf.config.experimental.enable_op_determinism()
 ```
 
-- Start with a small training and validation dataset to allow for faster iterations. Only start training on the full dataset when you are confident the model training is stable and behave as expected.
-
-- Avoid using methods that are not necessary for a basic training (for instance LR scheduling, quantization, data augmentations, etc…) in order to reduce the size of the search space of potential bugs.
-
-- Check that the initial loss makes sense: for instance if the cross-entropy loss is used, the initial loss should be close to $-\log(\frac{1}{\text{num classes}})$ if the last layer is initialized correctly ( "default" values can be derived for other losses):
-
-$$
-\begin{split}
-\text{CE}(y, \hat{y}) & = - \sum_{c \in \mathcal{C}} y_c \log (\hat{y}_c) \\
-& = - \sum_{c \in \mathcal{C}} y_c \log (\frac{1}{\text{num classes}}) \\
-& = - \log(\frac{1}{\text{num classes}})
-\end{split}
-$$
-
 - It is useful to have a fully flexible implementation of the model and the data loader such that you can easily change the number of hidden layers, their dimensions, the batch size, the learning rate, etc… In particular, implementing the model, data loader and training configurations as a Dataclass makes it easy to change the parameters in only one place.
 
 ```python
@@ -107,7 +93,25 @@ model_cfg = ModelConfig(4, 128, 0.2)
 train_cfg = TrainingConfig(1024, 8, 1e-3, 1e-6, 1000)
 ```
 
+### Training
+
+- Start with a small training and validation dataset to allow for faster iterations. Only start training on the full dataset when you are confident the model training is stable and behave as expected.
+
+- Avoid using methods that are not necessary for a basic training (for instance LR scheduling, quantization, data augmentations, etc…) in order to reduce the size of the search space of potential bugs.
+
+- Check that the initial loss makes sense: for instance if the cross-entropy loss is used, the initial loss should be close to $-\log(\frac{1}{\text{num classes}})$ if the last layer is initialized correctly ( "default" values can be derived for other losses):
+
+$$
+\begin{split}
+\text{CE}(y, \hat{y}) & = - \sum_{c \in \mathcal{C}} y_c \log (\hat{y}_c) \\
+& = - \sum_{c \in \mathcal{C}} y_c \log (\frac{1}{\text{num classes}}) \\
+& = - \log(\frac{1}{\text{num classes}})
+\end{split}
+$$
+
 - Include some prior knowledge in the initialization scheme: in a regression task, if you know the mean of the target is around some value $\mu$, you should initialize the bias of the last layer to $\mu$. If it is a classification task and you know you have a 100:1 class imbalance, set the bias of the logits such that the initial output probability is 0.1. It will help the training converge faster.
+
+- Be careful when choosing the learning rate and the batch size as the two are coupled and can have a significant impact on the training convergence. The rule of thumb is to increase the learning rate by the square root of the batch size increase. Empirical studies [[1]](https://arxiv.org/abs/1706.02677) [[2]](https://arxiv.org/abs/2006.09092) show that the relation is more or less linear when using SGD and varies with the square root of the batch size when using adaptive optimizers like Adam.
 
 - Fit the model on a set of samples with constant values (such as tensors of zeros). This data-independent model should perform worse than the one fitted on the real data and if it does, it’ll indicate that the model is able to extract useful information for the learning task.
 
