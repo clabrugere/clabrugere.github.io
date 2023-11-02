@@ -30,7 +30,7 @@ While not really formalized, we can apply a systematic process to minimize the c
 | :------------------------------------------: | :----------------------------------------------: |
 | (x0, y0)<br>(x1, y1)<br>(x2, y2)<br>(x3, y3) | { (x0, y1), (x1, y2) }<br>{ (x2, y0), (x3, y3) } |
 
-- Make sure continuous inputs are properly normalized: they should ideally take values in [-0.5, 0.5] in order to avoid saturating activation functions (leading instabilities such as vanishing or exploding gradients). It is also a good practice to standardize the inputs to make them have zero mean and unit variance.
+- Make sure continuous inputs are properly normalized: they should ideally take values in [-1., 1.] in order to avoid saturating activation functions (leading instabilities such as vanishing or exploding gradients). It is also a good practice to standardize the inputs to make them have zero mean and unit variance.
 
 - Features should have the same scale to avoid bias in the learning process. If feature 1 has an order of magnitude 1 but feature 2 has order of magnitude 1000, then gradient components corresponding to feature 2 will be much larger and the descent of the gradient will be biased in one direction.
 
@@ -95,11 +95,17 @@ train_cfg = TrainingConfig(1024, 8, 1e-3, 1e-6, 1000)
 
 ### Training
 
+#### Start small
+
 - Start with a small training and validation dataset to allow for faster iterations. Only start training on the full dataset when you are confident the model training is stable and behave as expected.
 
 - Avoid using methods that are not necessary for a basic training (for instance LR scheduling, quantization, data augmentations, etc…) in order to reduce the size of the search space of potential bugs.
 
-- Check that the initial loss makes sense: for instance if the cross-entropy loss is used, the initial loss should be close to $-\log(\frac{1}{\text{num classes}})$ if the last layer is initialized correctly ( "default" values can be derived for other losses):
+- Overfit the model on a single batch: with a large enough capacity the model should converge to the global minimum loss (e.g zero). If it does it indicates that the model is able to extract useful information. If the less doesn’t decrease towards zero quickly, your loss might be ill-defined (flipped sign), learning rate too high, have numerical instabilities, inputs and labels not aligned or a bug in the model implementation itself.
+
+#### Check the loss
+
+- Check that the initial loss makes sense: for instance if the cross-entropy loss is used, the initial loss should be close to $-\log(\frac{1}{\text{num classes}})$ if the last layer is initialized correctly for a balanced dataset (for a dataset with 10% positive and 90 negative instances the initial BCE should be close to $-(0.1 \cdot \log(0.5) + 0.9 \cdot \log(0.5))$ ). If it is very far from that, it means that the initialization is not correct and the model has a bias from the start.
 
 $$
 \begin{split}
@@ -111,15 +117,19 @@ $$
 
 - Include some prior knowledge in the initialization scheme: in a regression task, if you know the mean of the target is around some value $\mu$, you should initialize the bias of the last layer to $\mu$. If it is a classification task and you know you have a 100:1 class imbalance, set the bias of the logits such that the initial output probability is 0.1. It will help the training converge faster.
 
+- Fit a simple, low capacity model to a small dataset with real data, then increase the model’s capacity (by increasing the number of layers for example). The loss should decrease, if not then there is probably a bug somewhere.
+
+#### Check the convergence
+
+- Plot loss curves as it allows to get a quick glance of the learning dynamics: does the model properly converge? Do you see large spikes? Are you overfitting at some point? Is the validation loss close to the training loss?
+
 - Be careful when choosing the learning rate and the batch size as the two are coupled and can have a significant impact on the training convergence. The rule of thumb is to increase the learning rate by the square root of the batch size increase. Empirical studies [[1]](https://arxiv.org/abs/1706.02677) [[2]](https://arxiv.org/abs/2006.09092) show that the relation is more or less linear when using SGD and varies with the square root of the batch size when using adaptive optimizers like Adam.
 
 - Fit the model on a set of samples with constant values (such as tensors of zeros). This data-independent model should perform worse than the one fitted on the real data and if it does, it’ll indicate that the model is able to extract useful information for the learning task.
 
-- Fit a simple, low capacity model to a small dataset with real data, then increase the model’s capacity (by increasing the number of layers for example). The loss should decrease, if not then there is probably a bug somewhere.
-
-- Overfit on a batch of a few samples: with a large enough capacity the model should converge to the global minimum loss (e.g zero). If it does it indicates that the model is able to extract useful information. If the loss increases, your loss might be ill-defined (flipped sign), learning rate too high, numerical instabilities, inputs and labels are not aligned.
-
 - Log the predictions of a small validation batch during training to understand their dynamics. They should become more and more stable (that is not that different from one epoch to another) if the model is learning correctly and in a stable fashion. It also helps understand if the learning rate order of magnitude is good: a small learning rate will make the predictions dynamics change slowly without an apparent lower bound while a large learning rate will make the predictions oscillate with a large amplitude during the training.
+
+- Low convergence can be caused by “dead neurons” where gradients stop flowing back on some activations. It can happen with ReLu, and a solution is to try using a leaky ReLu or any other function that has a non-zero derivative for x < 0. You can diagnose that by checking if the gradients are zeros for a given neuron or if neuron’s inputs are negative.
 
 - Log gradients to understand the dependencies between model's weights. For instance let’s say you introduced a bug where information is mixed batch-wise (mixing information from different samples by using a `reshape` operation instead of a `transpose` for example). By defining a simple loss like the sum of outputs for a fixed sample and logging gradients of the input with respect to the loss, you will see non-zero gradients elsewhere than the input used in the loss, indicating that there is some unexpected dependencies between inputs. (note that you need to remove layers that do some batch-wise normalization with trainable weights as it introduces dependencies between samples but it is not a bug):
 
@@ -187,8 +197,6 @@ axes[1].tick_params(axis="x", labelrotation=90)
 ```
 
 - Logging intermediate values will help detect numerical instabilities. Those can happen when using functions that can easily under/overflow, such as log or exponential functions.
-
-- Plot loss curves as it allows to get a quick glance of the learning dynamics: does the model properly converge? Do you see large spikes? Are you overfitting at some point? Is the validation loss close to the training loss?
 
 - You can decompose the error as: $\text{total error} = \text{irreducible error} + \text{training error (bias)} + \text{validation error (variance)} + \text{validation overfitting}$. Model capacity/complexity addresses the bias, regularizing the variance. But sometimes (not necessarily true for deep learning models), increasing the regularization can degrade the training error. When experimenting, it is a good practice to log the contributions of each error mode across experiments to better determine where to act.
 
