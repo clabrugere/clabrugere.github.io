@@ -30,7 +30,7 @@ While not really formalized, we can apply a systematic process to minimize the c
 | :------------------------------------------: | :----------------------------------------------: |
 | (x0, y0)<br>(x1, y1)<br>(x2, y2)<br>(x3, y3) | { (x0, y1), (x1, y2) }<br>{ (x2, y0), (x3, y3) } |
 
-- Make sure continuous inputs are properly normalized: they should ideally take values in [0, 1] to avoid saturating activation functions (leading instabilities such as vanishing or exploding gradients). It is also a good practice to make the input have zero mean and unit variance.
+- Make sure continuous inputs are properly normalized: they should ideally take values in [-0.5, 0.5] in order to avoid saturating activation functions (leading instabilities such as vanishing or exploding gradients). It is also a good practice to standardize the inputs to make them have zero mean and unit variance.
 
 - Features should have the same scale to avoid bias in the learning process. If feature 1 has an order of magnitude 1 but feature 2 has order of magnitude 1000, then gradient components corresponding to feature 2 will be much larger and the descent of the gradient will be biased in one direction.
 
